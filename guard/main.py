@@ -51,9 +51,9 @@ def diff_defaults(repo: str, old_tag: str, new_tag: str, dep_cfg: dict, cache: s
     cfg = C.load(None, dep_cfg.get("preset") or "generic", over)
     meta = CommitMeta(new, [old], "", "", f"{old_tag}..{new_tag}", "")
     e = analyze_commit(dest, meta, cfg, repo)
-    skip = re.compile(dep_cfg.get("ignore_names") or r"(^|\.)(version|__version__|VERSION)$")
+    skip = re.compile(dep_cfg.get("ignore_names") or r"(^|\.)(version|__version__|VERSION|desc|doc|short|section|meta|cli|validator|action|nargs|metavar|name|type)$")
     changes = [c for c in e["changes"] if c["kind"] in ("changed", "moved") and c["old"] != c["new"] and not skip.search(c["name"])]
-    removed = [c for c in e["changes"] if c["kind"] == "removed" and c["extractor"] not in CONST_LIKE]
+    removed = [c for c in e["changes"] if c["kind"] == "removed" and c["extractor"] not in CONST_LIKE and not skip.search(c["name"])]
     return {"old_sha": old, "new_sha": new, "files_scanned": e["stats"]["files"], "changed": changes, "removed": removed}
 
 
@@ -68,7 +68,7 @@ def render(results: list[dict], limit: int = 25) -> str:
     if not results:
         out.append("No pinned dependency bumps detected.")
     for r in results:
-        head = f"**{r['name']}** `{r['old']}` → `{r['new']}` ({r['ecosystem']}, `{r['manifest']}`)"
+        head = f"<b>{r['name']}</b> <code>{r['old']}</code> → <code>{r['new']}</code> ({r['ecosystem']}, <code>{r['manifest']}</code>)"
         if r.get("error"):
             out += [f"- {head}: skipped. {r['error']}", ""]
             continue
