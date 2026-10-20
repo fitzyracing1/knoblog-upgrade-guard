@@ -1,0 +1,16 @@
+# .github/workflows/knobs-upgrade-guard.yml
+name: knobs upgrade guard
+on:
+  pull_request:
+    paths: ['**/requirements*.txt', '**/requirements*.in', '**/pyproject.toml', '**/package.json', '**/package.xml']
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  knobs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: fitzyracing1/knoblog-upgrade-guard@v0

@@ -1,0 +1,9 @@
+# .github/knobs.yml (optional). Everything here is an override; the defaults resolve repos from PyPI/npm metadata.
+ignore: [pytest]
+dependencies:
+  gunicorn:
+    paths: ['gunicorn/**']           # only scan the library source
+  nav2_costmap_2d:                   # ROS: package.xml rarely pins versions; map the package to its repo + tags
+    repo: https://github.com/ros-navigation/navigation2
+    tag: '{version}'
+    paths: ['nav2_bringup/params/*.yaml']

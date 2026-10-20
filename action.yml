@@ -1,0 +1,51 @@
+name: knoblog upgrade guard
+description: On dependency-bump PRs, list the default parameters that changed between the old and new versions, as a PR comment.
+author: Joshua Almeida
+branding:
+  icon: sliders
+  color: orange
+inputs:
+  config:
+    description: Optional per-dependency overrides (repo, tag template, paths)
+    default: .github/knobs.yml
+  comment:
+    description: Post or update a PR comment (true/false)
+    default: 'true'
+  fail-on-change:
+    description: Fail the check when any default changed
+    default: 'false'
+  github-token:
+    description: Token used to comment
+    default: ${{ github.token }}
+  knoblog-version:
+    description: pip spec for knoblog
+    default: knoblog>=0.1.1
+outputs:
+  bumps:
+    description: Number of bumped dependencies
+    value: ${{ steps.g.outputs.bumps }}
+  changed:
+    description: Number of changed defaults
+    value: ${{ steps.g.outputs.changed }}
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v7
+      with:
+        python-version: '3.12'
+    - shell: bash
+      run: python -m pip install --quiet "${{ inputs.knoblog-version }}"
+    - id: g
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        PYTHONPATH: ${{ github.action_path }}
+        BASE: ${{ github.event.pull_request.base.sha }}
+        HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        PR: ${{ github.event.pull_request.number }}
+      run: |
+        git fetch --quiet --no-tags origin "$BASE" "$HEAD_SHA" || true
+        args=(--base "$BASE" --head "$HEAD_SHA" --config "${{ inputs.config }}" --out "$RUNNER_TEMP/knobs.json" --markdown "$RUNNER_TEMP/knobs.md")
+        [ "${{ inputs.comment }}" = "true" ] && [ -n "$PR" ] && args+=(--comment "$PR")
+        [ "${{ inputs.fail-on-change }}" = "true" ] && args+=(--fail-on-change)
+        python -m guard "${args[@]}"
