@@ -54,29 +54,42 @@ def python_defaults(path: str, text: str) -> dict[str, dict]:
     return KX._dedupe(out)
 
 
-_JS_LIT = r"""(-?\d[\d_.]*(?:e[-+]?\d+)?|true|false|null|'[^'\n]{0,80}'|"[^"\n]{0,80}"|`[^`$\n]{0,80}`)"""
+_JS_LIT = r"""(-?\d[\d_.]*(?:e[-+]?\d+)?(?:\s*[*+]\s*\d[\d_.]*)*|true|false|null|undefined|'[^'\n]{0,80}'|"[^"\n]{0,80}"|`[^`$\n]{0,80}`|\[(?:\s*(?:'[^'\n]*'|"[^"\n]*"|-?\d[\d.]*|true|false)\s*,?)*\s*\])"""
 _JS_CONST = re.compile(rf"^\s*(?:export\s+)?(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*(?::\s*[\w<>\[\]| ]+)?=\s*{_JS_LIT}\s*;?\s*(?://.*)?$")
-_JS_OBJ_START = re.compile(r"^\s*(?:export\s+)?(?:const|let|var)?\s*((?:[A-Za-z_$][\w$.]*)?(?:[Dd]efaults?|DEFAULTS?|[Cc]onfig|[Oo]ptions)\w*)\s*(?::[^=]+)?=\s*\{\s*$")
+_JS_OBJ_START = re.compile(r"^\s*(?:export\s+)?(?:const|let|var)?\s*((?:[A-Za-z_$][\w$.]*)?(?:[Dd]efaults?|DEFAULTS?|[Cc]onfig|[Oo]ptions)\w*)\s*(?::[^=]+)?=\s*(?:Object\.freeze\()?\{\s*$")
 _JS_KV = re.compile(rf"^\s*['\"]?([A-Za-z_$][\w$-]*)['\"]?\s*:\s*{_JS_LIT}\s*,?\s*(?://.*)?$")
+_JS_NEST = re.compile(r"^\s*['\"]?([A-Za-z_$][\w$-]*)['\"]?\s*:\s*\{\s*$")
 
 
 def js_defaults(path: str, text: str) -> dict[str, dict]:
-    out, obj, depth = [], None, 0
+    """`export const defaultConfig = Object.freeze({ a: 1, nested: { b: 'x' } })` -> defaultConfig.a, defaultConfig.nested.b."""
+    out, stack, skip = [], [], 0
     for line in text.splitlines():
-        if obj:
-            depth += line.count("{") - line.count("}")
-            if depth <= 0:
-                obj = None
+        code = re.sub(r"//.*$", "", line)
+        if stack:
+            if skip:  # inside a non-literal block (function body, array of objects...)
+                skip += code.count("{") + code.count("[") - code.count("}") - code.count("]")
                 continue
-            m = _JS_KV.match(line)
-            if m and depth == 1:
-                out.append((f"{obj}.{m.group(1)}", KX._rec(m.group(2))))
+            m = _JS_NEST.match(code)
+            if m:
+                stack.append(m.group(1))
+                continue
+            m = _JS_KV.match(code)
+            if m:
+                out.append((".".join(stack + [m.group(1)]), KX._rec(m.group(2))))
+                continue
+            opened = code.count("{") + code.count("[") - code.count("}") - code.count("]")
+            if opened > 0:
+                skip = opened
+                continue
+            if re.match(r"^\s*[}\]]", code):
+                stack.pop()
             continue
-        m = _JS_OBJ_START.match(line)
+        m = _JS_OBJ_START.match(code)
         if m:
-            obj, depth = m.group(1), 1
+            stack = [m.group(1)]
             continue
-        m = _JS_CONST.match(line)
+        m = _JS_CONST.match(code)
         if m and (m.group(1).isupper() or re.search(r"default|timeout|max|min|limit|retr|size", m.group(1), re.I)):
             out.append((m.group(1), KX._rec(m.group(2))))
     return KX._dedupe(out)

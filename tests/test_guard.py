@@ -30,7 +30,7 @@ class Extract(unittest.TestCase):
     def test_js_defaults(self):
         src = "const defaults = {\n  timeout: 0,\n  maxRedirects: 21,\n  headers: {\n    a: 1\n  }\n};\nexport const MAX_RETRIES = 3;\n"
         out = {k: v["value"] for k, v in extractors.js_defaults("d.js", src).items()}
-        self.assertEqual(out, {"defaults.timeout": "0", "defaults.maxRedirects": "21", "MAX_RETRIES": "3"})
+        self.assertEqual(out, {"defaults.timeout": "0", "defaults.maxRedirects": "21", "defaults.headers.a": "1", "MAX_RETRIES": "3"})
 
 
 class Resolve(unittest.TestCase):
