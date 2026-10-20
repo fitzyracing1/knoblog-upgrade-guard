@@ -8,7 +8,7 @@ dependency in a pull request, diffs the **old tag against the new tag** of that 
 [knoblog](https://github.com/fitzyracing1/knoblog), and posts one PR comment listing the changed defaults (old,
 new, Δ%, file link). It updates that same comment on later pushes.
 
-**Live demo:** [fitzyracing1/knobs-guard-demo#1](https://github.com/fitzyracing1/knobs-guard-demo/pull/1)
+**Live demos:** [pip bump: gunicorn/celery/httpx (knobs-guard-demo#1)](https://github.com/fitzyracing1/knobs-guard-demo/pull/1) · [npm bump: next 15.0 → 15.1 (knobs-guard-demo#2)](https://github.com/fitzyracing1/knobs-guard-demo/pull/2)
 
 ## Usage
 
